@@ -1,11 +1,12 @@
 # ATAC-amp
 Searching for  co-amplified regions on the genome from ATAC-seq data
 python find_spreads_process_v2.py -h
-usage: find_spreads_process_v2.py [-h] [--bam BAM] [--name NAME]
-                                  [--isize_value ISIZE]
-                                  [--interval_size INTERVAL] [--mapq MAQP]
-                                  [--mode {0,1,2}] [--discbk DISCBK]
-                                  [--type LIB] [--gtf GTF]
+usage: find_spreads_process_v2.py
+[-h] [--bam BAM] [--name NAME]
+[--isize_value ISIZE]
+[--interval_size INTERVAL] [--mapq MAQP]
+[--mode {0,1,2}] [--discbk DISCBK]
+[--type LIB] [--gtf GTF]
 
 use atac data find ecdna
 
