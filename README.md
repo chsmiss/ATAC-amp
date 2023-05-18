@@ -42,6 +42,8 @@ python ../../../10.other/AtacAmp/AtacAmp.py --bam ../../10.atac_seq_data/SRR8236
 ## Output
 ### example output(.result)
 ![](./result_example.png)
-### example output figure(png format)
+### example output figure(png format):The links of  highest scoring co-amplified regions in the colo320DM cell line.
 ![](./result_figure.png)
+### MYC expression heterogeneity in the colo320dm cell line
+![](./1684413741222.jpg)
 ## License
