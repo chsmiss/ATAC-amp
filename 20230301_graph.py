@@ -9,7 +9,7 @@ import concurrent.futures
 
 
 s_t = time.time()
-#打开不同区域的断点对
+#Open breakpoint pairs in different areas
 f_dif_bk = open(sys.argv[1],'r')
 f_out = open(sys.argv[2],'w')
 mode = sys.argv[3]
@@ -50,13 +50,13 @@ def getbarcode(args):
     return list(set(cblist))
 
 def split_list(lst, num_parts):
-    # 计算每个子列表的长度
+    # Calculate the length of each sublist
     n = len(lst)
     len_part = n // num_parts
-    # 将列表分割成指定数量的子列表
+ 
     parts = [lst[i * len_part:(i + 1) * len_part] for i in
              range(num_parts)]
-    # 如果有余数，则将余数部分添加到最后一个子列表中
+
     if n % num_parts != 0:
         parts[-1].extend(lst[num_parts * len_part:])
     return parts
@@ -73,14 +73,14 @@ def getbarcode_multiprocess(srr_name,bam_name,f_out,threads):
 
 def dfs(start, curr, path, visited,G_dfs):
     """
-    用于进行深度优先遍历的函数
+    Functions for depth-first traversal
     """
     visited.add(curr)
     path.append(curr)
     for neighbor in G_dfs.neighbors(curr):
         if neighbor == start and len(path) > 2:
             path.append(start)
-            yield path.copy()  # 找到了一个环
+            yield path.copy() 
             path.pop()
         elif neighbor not in visited:
             yield from dfs(start, neighbor, path, visited,G_dfs)
@@ -91,7 +91,7 @@ bam_list = []
 
 if sys.argv[3] == 'sc':
         bam_name = sys.argv[1].strip('.bkline_dif_interval')+'.discordant.bam'
-        #读取bam文件，要有索引，获取细胞barcode
+        #Read the bam file, be indexed, get the cell barcode
         f_bam = pysam.AlignmentFile(bam_name,'rb')
         for line_bam in f_bam:
                 bam_list.append(line_bam)
@@ -99,15 +99,15 @@ if sys.argv[3] == 'sc':
 
 print('fuction finished')
 print(time.time()-s_t)
-#所有区域id列表
+
 seg_list = []
-#断点对左右两个区域id的列表转成元组，再存在列表
+#The list of breakpoints for the left and right area ids is converted to a tuple, which then exists as a list
 edge_list = []
-#node字典，key为区域id，值为染色体号，起始终止位置和长度
+#node dictionary, key is region id, value is chromosome number, start/end position and length
 node_dict = {}
-#edge字典，key为断点对的左右两个区域id，值为支持这个断点对的reads id
+#edge dictionary, key is the left and right region id of the breakpoint pair, value is the reads id supporting the breakpoint pair
 edge_dict = {}
-#遍历断点对文件
+
 for line in f_dif_bk.readlines():
         line_list = line.split('\t')
         seg_list = seg_list+line_list[:2]
@@ -129,7 +129,7 @@ print(time.time()-s_t)
 
 
 amp_gene = {}
-#注释扩增区域
+#Annotated amplification regions
 for key in node_dict.keys():
         amp_gene[key]=[]
         amp_line = node_dict[key].split('\t')
@@ -150,21 +150,21 @@ print(time.time()-s_t)
 
 #print(amp_gene)
 
-#创建空的网络图
+
 G=nx.Graph()
 #H = nx.path_graph(len(nodes))
 #G.add_nodes_from(H)
-#从元组列表中获得边和节点
+
 G.add_edges_from(edge_list)
 
 
-#判断是否是连通图
+
 #print(nx.is_connected(G))
 
 
 
 
-#输入一个图，输出每条边对应的支持reads id
+
 def out_edge(subgraph):
         srr_num = 0
         srr_id = ''
@@ -175,7 +175,7 @@ def out_edge(subgraph):
 
         return (srr_num,srr_id)
 
-#输出连通分量的节点集合
+
 def node_set(G_e):
         sum_len = 0
         for ii in G_e:
@@ -185,21 +185,14 @@ def node_set(G_e):
         return (sum_len)
 
 
-#输出图的连通分量数量
-#print(nx.number_connected_components(G))
 
-#输出图中的环
-#print(nx.cycle_basis(G))
-#print(nx.find_cycle(G))
-
-#
 largest = list(nx.connected_components(G))
 sorted_subgraph = []
 for line1 in largest:
         sort_i = out_edge(G.subgraph(line1))[0]
         sorted_subgraph.append([line1,sort_i])
 
-#按支持reads数排序扩增区域
+#Amplification regions sorted by number of supported reads
 sorted_subgraph = sorted(sorted_subgraph, key=lambda x:x[1],reverse=True)
 
 
