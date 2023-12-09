@@ -149,8 +149,7 @@ def process_split_reads(split_bam):
                         sum_deletions += length
                     elif operation == 'M':
                         sum_matches += length
-                result = sum_matches + sum_deletions - sum_insertions
-                        'I').split('D')
+                result = sum_matches + sum_deletions -sum_insertions
                 breakpoint_start = split_line.pos + int(result)
                 orient1 = '+'
             else:
