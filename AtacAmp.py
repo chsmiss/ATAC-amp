@@ -137,13 +137,10 @@ def process_split_reads(split_bam):
             if not (('H' in split_line.cigarstring.split('M')[0]) or ('S' in split_line.cigarstring.split('M')[0])):
                 ##20231209 modified----
                 cigar_string = split_line.cigarstring.split('M')[0]
-                # 使用正则表达式匹配操作符和长度
                 matches = re.findall(r'(\d+)([IDM])', cigar_string)
-                # 初始化变量用于保存长度之和
                 sum_insertions = 0
                 sum_deletions = 0
                 sum_matches = 0
-                # 遍历匹配结果并计算长度之和
                 for length, operation in matches:
                     length = int(length)
                     if operation == 'I':
@@ -152,7 +149,6 @@ def process_split_reads(split_bam):
                         sum_deletions += length
                     elif operation == 'M':
                         sum_matches += length
-                    # 计算 M前数字 加上 D前数字 减去 I前数字
                 result = sum_matches + sum_deletions - sum_insertions
                         'I').split('D')
                 breakpoint_start = split_line.pos + int(result)
@@ -171,13 +167,13 @@ def process_split_reads(split_bam):
             sa_cigar_info = sa_cigar.split('M')
             if not (('H' in sa_cigar_info[0]) or ('S' in sa_cigar_info[0])):
                 cigar_string = sa_cigar_info[0]
-                # 使用正则表达式匹配操作符和长度
+                # Matching operators and lengths with regular expressions
                 matches = re.findall(r'(\d+)([IDM])', cigar_string)
-                # 初始化变量用于保存长度之和
+                # Initialization variables are used to hold the sum of the lengths
                 sum_insertions = 0
                 sum_deletions = 0
                 sum_matches = 0
-                # 遍历匹配结果并计算长度之和
+                # calculate sum
                 for length, operation in matches:
                     length = int(length)
                 if operation == 'I':
@@ -186,7 +182,6 @@ def process_split_reads(split_bam):
                     sum_deletions += length
                 elif operation == 'M':
                     sum_matches += length
-                # 计算 M前数字 加上 D前数字 减去 I前数字
                 result = sum_matches + sum_deletions - sum_insertions
                 'I').split('D')
                 breakpoint_end = int(sa_start) + int(result)
@@ -269,7 +264,7 @@ def process_discordant_reads(disc_bam_file,f_long=500):
             print(time.time()-s_t)
             print(count2)
 
-        #read1和read2比对到同一染色体上
+        #read1和read2 map to the same chromosome
         if disc_line.reference_name == disc_line.next_reference_name:
             bk_start = min(disc_line.pos, disc_line.next_reference_start)
             bk_end = max(disc_line.pos, disc_line.next_reference_start)
