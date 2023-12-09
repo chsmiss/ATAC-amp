@@ -47,3 +47,6 @@ python ../../../10.other/AtacAmp/AtacAmp.py --bam ../../10.atac_seq_data/SRR8236
 ### MYC expression heterogeneity in the colo320dm cell line
 ![](./1684413741222.jpg)
 ## License
+
+## Citation
+Cheng, H., Ma, W., Wang, K. et al. ATACAmp: a tool for detecting ecDNA/HSRs from bulk and single-cell ATAC-seq data. BMC Genomics 24, 678 (2023). https://doi.org/10.1186/s12864-023-09792-6
