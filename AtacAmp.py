@@ -5,6 +5,7 @@ import time
 import psutil
 import os
 import sys
+import re
 #import concurrent.futures
 import interval
 import calculate_cnv
@@ -134,7 +135,27 @@ def process_split_reads(split_bam):
         if split_line.has_tag('SA'):
 
             if not (('H' in split_line.cigarstring.split('M')[0]) or ('S' in split_line.cigarstring.split('M')[0])):
-                breakpoint_start = split_line.pos + int(split_line.cigarstring.split('M')[0])
+                ##20231209 modified----
+                cigar_string = split_line.cigarstring.split('M')[0]
+                # 使用正则表达式匹配操作符和长度
+                matches = re.findall(r'(\d+)([IDM])', cigar_string)
+                # 初始化变量用于保存长度之和
+                sum_insertions = 0
+                sum_deletions = 0
+                sum_matches = 0
+                # 遍历匹配结果并计算长度之和
+                for length, operation in matches:
+                    length = int(length)
+                    if operation == 'I':
+                        sum_insertions += length
+                    elif operation == 'D':
+                        sum_deletions += length
+                    elif operation == 'M':
+                        sum_matches += length
+                    # 计算 M前数字 加上 D前数字 减去 I前数字
+                result = sum_matches + sum_deletions - sum_insertions
+                        'I').split('D')
+                breakpoint_start = split_line.pos + int(result)
                 orient1 = '+'
             else:
                 breakpoint_start = split_line.pos
@@ -149,7 +170,26 @@ def process_split_reads(split_bam):
 
             sa_cigar_info = sa_cigar.split('M')
             if not (('H' in sa_cigar_info[0]) or ('S' in sa_cigar_info[0])):
-                breakpoint_end = int(sa_start) + int(sa_cigar_info[0])
+                cigar_string = sa_cigar_info[0]
+                # 使用正则表达式匹配操作符和长度
+                matches = re.findall(r'(\d+)([IDM])', cigar_string)
+                # 初始化变量用于保存长度之和
+                sum_insertions = 0
+                sum_deletions = 0
+                sum_matches = 0
+                # 遍历匹配结果并计算长度之和
+                for length, operation in matches:
+                    length = int(length)
+                if operation == 'I':
+                    sum_insertions += length
+                elif operation == 'D':
+                    sum_deletions += length
+                elif operation == 'M':
+                    sum_matches += length
+                # 计算 M前数字 加上 D前数字 减去 I前数字
+                result = sum_matches + sum_deletions - sum_insertions
+                'I').split('D')
+                breakpoint_end = int(sa_start) + int(result)
                 orient2 = '+'
             else:
                 breakpoint_end = int(sa_start)
