@@ -89,7 +89,7 @@ def find_special_reads(bam_file, pref, isize,mapq_filter=0):
             print(line_n)
             e_t = time.time()
             print(e_t - s_t)
-            print('membrane：%.4f GB' % (psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024 / 1024))
+            print('memory：%.4f GB' % (psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024 / 1024))
 
         if (reads_line.reference_name in ['chrM', 'MT']) or (reads_line.next_reference_name in ['chrM', 'MT']):
             continue
@@ -175,12 +175,12 @@ def process_split_reads(split_bam):
                 # calculate sum
                 for length, operation in matches:
                     length = int(length)
-                if operation == 'I':
-                    sum_insertions += length
-                elif operation == 'D':
-                    sum_deletions += length
-                elif operation == 'M':
-                    sum_matches += length
+                    if operation == 'I':
+                        sum_insertions += length
+                    elif operation == 'D':
+                        sum_deletions += length
+                    elif operation == 'M':
+                        sum_matches += length
                 result = sum_matches + sum_deletions - sum_insertions
                 breakpoint_end = int(sa_start) + int(result)
                 orient2 = '+'
