@@ -12,7 +12,7 @@ High expression of oncogenes in cancer cells is an important cause of rapid tumo
 ## Install
 conda create -n atacamp python=3.7.12  
 conda activate atacamp  
-python3 -m pip install pysam interval argparse re networkx matplotlib  
+python3 -m pip install pysam interval argparse networkx matplotlib psutil  
 ### Github source code:
 git clone https://github.com/chsmiss/ATAC-amp.git
 ## Usage
