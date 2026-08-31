@@ -20,7 +20,7 @@ interval_module = types.ModuleType("interval")
 interval_module.Interval = FakeInterval
 sys.modules.setdefault("interval", interval_module)
 spec = importlib.util.spec_from_file_location(
-    "calculate_cnv", Path(__file__).parents[1] / "calculate_cnv.py"
+    "calculate_cnv", Path(__file__).parents[1] / "atacamp" / "cnv.py"
 )
 calculate_cnv = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(calculate_cnv)

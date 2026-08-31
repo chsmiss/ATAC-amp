@@ -8,7 +8,7 @@ import sys
 import re
 #import concurrent.futures
 import interval
-import calculate_cnv
+from atacamp import cnv
 import subprocess
 from multiprocessing import Pool
 from pathlib import Path
@@ -343,17 +343,17 @@ if args.mode == 0:
     print('process_disc_reads_finished')
     acov = calculate_average_depth(f_input_bam, args.threads)
 
-    bkamplicon_f = calculate_cnv.find_amp(f_input_bam, discbk_f,
+    bkamplicon_f = cnv.find_amp(f_input_bam, discbk_f,
                                           interval=extent_interval_size, cov=
                                           acov).process_coverage()
     print('amplicon find finished')
     argv2 = args.name+'.bkline_interval'
     argv3 = args.name+'.bkline_dif_interval'
-    subprocess.run([sys.executable, os.path.join(sys.path[0], 'bkgraph.py'), bkamplicon_f, argv2, argv3], check=True)
+    subprocess.run([sys.executable, os.path.join(sys.path[0], 'atacamp', 'breakpoint_graph.py'), bkamplicon_f, argv2, argv3], check=True)
     print('bkgraph finished')
 
     subprocess.run(['samtools', 'index', disc_bam_f], check=True)
-    argv_line2 = [sys.executable, os.path.join(sys.path[0], '20230301_graph.py'),
+    argv_line2 = [sys.executable, os.path.join(sys.path[0], 'atacamp', 'amplicon_graph.py'),
                   argv3, args.name + '.result', args.lib, args.gtf, str(args.threads)]
     print(argv_line2)
     subprocess.run(argv_line2, check=True)
@@ -363,21 +363,21 @@ if args.mode == 1:
     s_t = time.time()
     acov = calculate_average_depth(f_input_bam, args.threads)
 
-    bkamplicon_f = calculate_cnv.find_amp(f_input_bam, discbk_f,
+    bkamplicon_f = cnv.find_amp(f_input_bam, discbk_f,
                               interval=extent_interval_size,cov =
                                           acov).process_coverage()
     print('amplicon find finished')
     print(time.time() - s_t)
     argv2 = args.name + '.bkline_interval'
     argv3 = args.name + '.bkline_dif_interval'
-    subprocess.run([sys.executable, os.path.join(sys.path[0], 'bkgraph.py'), bkamplicon_f, argv2, argv3], check=True)
+    subprocess.run([sys.executable, os.path.join(sys.path[0], 'atacamp', 'breakpoint_graph.py'), bkamplicon_f, argv2, argv3], check=True)
 
     #20230501 add
     print('bkgraph finished')
     suffix = '.disc_bk'
     disc_bam_f = discbk_f[:-len(suffix)] + '.bam' if discbk_f.endswith(suffix) else discbk_f + '.bam'
     subprocess.run(['samtools', 'index', disc_bam_f], check=True)
-    argv_line2 = [sys.executable, os.path.join(sys.path[0], '20230301_graph.py'),
+    argv_line2 = [sys.executable, os.path.join(sys.path[0], 'atacamp', 'amplicon_graph.py'),
                   argv3, args.name + '.result', args.lib, args.gtf, str(args.threads)]
     print(argv_line2)
     subprocess.run(argv_line2, check=True)

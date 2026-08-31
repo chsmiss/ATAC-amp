@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.bam
+*.bai
+*.sam
+*.disc_bk
+*.split_bk
+*.bkline_interval
+*.bkline_dif_interval
+*.amplicon
+*.result
+
+# Keep the repository's curated example result.
+!examples/*.result
