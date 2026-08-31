@@ -11,23 +11,28 @@ import interval
 import calculate_cnv
 import subprocess
 from multiprocessing import Pool
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description='use atac data find ecdna')
-parser.add_argument('--bam',type=str,dest='bam',action='store',help = 'input the bam file')
+parser.add_argument('--bam',type=str,dest='bam',action='store',required=True,help = 'input the bam file')
 parser.add_argument('--name','-n',type=str,dest='name',action='store',help = 'prefix of output files ')
-parser.add_argument('--isize_value','-i',type=int,dest='isize',action='store',help = 'judge a pair of reads whether is discordant')
+parser.add_argument('--isize_value','-i',type=int,dest='isize',action='store',default=1000,help = 'judge a pair of reads whether is discordant (default: 1000)')
 parser.add_argument('--interval_size','-s',type=int,dest='interval',
-                    action='store',help = 'size of interval when compute breakpoint nearby coverage')
-parser.add_argument('--mapq','-q',type=int,dest='maqp',action='store',help = 'reads maqp threshold')
-parser.add_argument('--mode','-m',type=int,dest='mode',action='store',choices=[0, 1, 2],help = 'choose the analysis mode,0/1/2')
+                    action='store',default=1000,help = 'size of interval when compute breakpoint nearby coverage (default: 1000)')
+parser.add_argument('--mapq','-q',type=int,dest='maqp',action='store',default=0,help = 'reads mapq threshold (default: 0)')
+parser.add_argument('--mode','-m',type=int,dest='mode',action='store',choices=[0, 1],required=True,help = 'choose the analysis mode,0/1')
 parser.add_argument('--discbk','-d',type=str,dest='discbk',action='store',help = 'if you choose mode 1,you need to input discbk file')
-parser.add_argument('--type',type=str,dest='lib',action='store',help = 'choose library:sc/bulk')
-parser.add_argument('--gtf',type=str,dest='gtf',action='store',help = 'gtf file')
-parser.add_argument('--threads',type=int,dest='threads',action='store',help = 'threads')
+parser.add_argument('--type',type=str,dest='lib',action='store',choices=['sc', 'bulk'],required=True,help = 'choose library:sc/bulk')
+parser.add_argument('--gtf',type=str,dest='gtf',action='store',required=True,help = 'gtf file')
+parser.add_argument('--threads',type=int,dest='threads',action='store',default=1,help = 'threads (default: 1)')
 args = parser.parse_args()
 
-if args.name == None:
-    args.name = args.bam.split('/')[-1].rstrip('.bam')
+if args.name is None:
+    args.name = Path(args.bam).with_suffix('').name
+if args.threads < 1:
+    parser.error('--threads must be at least 1')
+if args.mode == 1 and not args.discbk:
+    parser.error('--discbk is required in mode 1')
 
 f_input_bam = args.bam
 isize_value = args.isize
@@ -50,18 +55,14 @@ def calculate_average_depth(bam_file, num_threads=1):
     bam = pysam.AlignmentFile(bam_file, "rb")
     contigs = bam.references
     bam.close()
-    pool = Pool(num_threads)
-    results = pool.map(calculate_average_depth_for_contig, [(bam_file, contig) for contig in contigs])
+    with Pool(num_threads) as pool:
+        results = pool.map(calculate_average_depth_for_contig, [(bam_file, contig) for contig in contigs])
     total_depth = 0
     total_positions = 0
     for depth, positions in results:
         total_depth += depth
         total_positions += positions
-    average_depth = total_depth / total_positions
-    return average_depth
-
-    bam.close()
-    average_depth = total_depth / total_positions
+    average_depth = total_depth / total_positions if total_positions else 0.0
     return average_depth
 
 #def find_special_reads(bam_file,pref,isize,mapq_filter=0):
@@ -70,12 +71,12 @@ def find_special_reads(bam_file, pref, isize,mapq_filter=0):
     f_out_bam_split = pref + '.split.bam'
     f_out_bam_discordant = pref+ '.discordant.bam'
 
-    if f_input_bam.endswith('.bam'):
+    if bam_file.endswith('.bam'):
         input_bam = pysam.AlignmentFile(bam_file, 'rb')
-    elif f_input_bam.endswith('.sam'):
+    elif bam_file.endswith('.sam'):
         input_bam = pysam.AlignmentFile(bam_file, 'r')
     else:
-        print('please input sam or bam file')
+        raise ValueError('input must be a SAM or BAM file')
 
     out_bam_split = pysam.AlignmentFile(f_out_bam_split, 'wb', template=input_bam)
     out_bam_discordant = pysam.AlignmentFile(f_out_bam_discordant, 'wb', template=input_bam)
@@ -118,7 +119,7 @@ def find_special_reads(bam_file, pref, isize,mapq_filter=0):
 def process_split_reads(split_bam):
     bam = pysam.AlignmentFile(split_bam, 'rb')
 
-    outfile = split_bam.split('/')[-1].rstrip('.bam')+'.split_bk'
+    outfile = Path(split_bam).with_suffix('').name + '.split_bk'
     f_out = open(outfile, 'w')
 
     breakpoint_dir = {}
@@ -206,6 +207,9 @@ def process_split_reads(split_bam):
       #  value_line = ''
         f_out.write(key + '\t' + str(len(value)) + '\n')
 
+    bam.close()
+    f_out.close()
+
   #  return (breakpoint_dir)
 
 
@@ -240,10 +244,10 @@ def sort_interval_list(interval_list):
 def process_discordant_reads(disc_bam_file,f_long=500):
     if disc_bam_file.endswith('.bam'):
         disc_bam = pysam.AlignmentFile(disc_bam_file, 'rb')
-        disc_outfile = disc_bam_file.strip('.bam').split('/')[-1]
+        disc_outfile = Path(disc_bam_file).with_suffix('').name
     if disc_bam_file.endswith('.sam'):
         disc_bam = pysam.AlignmentFile(disc_bam_file, 'r')
-        disc_outfile = disc_bam_file.strip('.sam').split('/')[-1]
+        disc_outfile = Path(disc_bam_file).with_suffix('').name
 
     f_disc_breakpoint = open(disc_outfile+'.disc_bk', 'w')
 
@@ -296,11 +300,10 @@ def process_discordant_reads(disc_bam_file,f_long=500):
             breakpoint_r = interval.Interval((disc_line.next_reference_start+1-f_long), (disc_line.next_reference_start+1+f_long))
             breakpoint_l = interval.Interval((disc_line.pos+1-f_long), (disc_line.pos+1+f_long))
 
-            if disc_line.reference_name > disc_line.next_reference_name:
-                temp_chr_l,temp_chr_r = disc_line.next_reference_name,disc_line.reference_name
-                breakpoint_l,breakpoint_r = breakpoint_r,breakpoint_l
-
-            temp_chr_r, temp_chr_l = disc_line.next_reference_name, disc_line.reference_name
+            temp_chr_l, temp_chr_r = disc_line.reference_name, disc_line.next_reference_name
+            if temp_chr_l > temp_chr_r:
+                temp_chr_l, temp_chr_r = temp_chr_r, temp_chr_l
+                breakpoint_l, breakpoint_r = breakpoint_r, breakpoint_l
             temp_key = temp_chr_l+'\t'+temp_chr_r
 
             if temp_key in breakpoint_dir:
@@ -311,12 +314,12 @@ def process_discordant_reads(disc_bam_file,f_long=500):
                         index_temp1 = 0
                         break
                 if index_temp1 == 1:
-                    breakpoint_dir[temp_key].append(BreakpointObj(disc_line.next_reference_name, breakpoint_l, disc_line.reference_name,breakpoint_r, disc_line.qname, disc_line.flag))
+                    breakpoint_dir[temp_key].append(BreakpointObj(temp_chr_l, breakpoint_l, temp_chr_r, breakpoint_r, disc_line.qname, disc_line.flag))
 
 
             else:
                 breakpoint_dir[temp_key]=[]
-                breakpoint_dir[temp_key].append(BreakpointObj(disc_line.next_reference_name, breakpoint_l, disc_line.reference_name, breakpoint_r, disc_line.qname, disc_line.flag))
+                breakpoint_dir[temp_key].append(BreakpointObj(temp_chr_l, breakpoint_l, temp_chr_r, breakpoint_r, disc_line.qname, disc_line.flag))
 
 
     for key, value in breakpoint_dir.items():
@@ -324,6 +327,7 @@ def process_discordant_reads(disc_bam_file,f_long=500):
             f_disc_breakpoint.write(line.integrate() + '\n')
 
     f_disc_breakpoint.close()
+    disc_bam.close()
   #  return (breakpoint_dir,bk_dir)
     disc_file_name = disc_outfile+'.disc_bk'
     return (disc_file_name)
@@ -331,9 +335,8 @@ def process_discordant_reads(disc_bam_file,f_long=500):
 
 #test_cnv.process_coverage(f_input_bam)
 if args.mode == 0:
-    split_bam_f,disc_bam_f = find_special_reads(f_input_bam,f_prefix,isize_value)
+    split_bam_f,disc_bam_f = find_special_reads(f_input_bam,f_prefix,isize_value,args.maqp)
     print('find special reads finished')
-    split_bk_dir = process_split_reads(split_bam_f)
     process_split_reads(split_bam_f)
     print('process split_reads finished')
     discbk_f = process_discordant_reads(disc_bam_f)
@@ -346,18 +349,14 @@ if args.mode == 0:
     print('amplicon find finished')
     argv2 = args.name+'.bkline_interval'
     argv3 = args.name+'.bkline_dif_interval'
-    argv_line = 'python '+sys.path[0]+'/bkgraph.py '+bkamplicon_f+' '+argv2+' '+argv3
-    subprocess.run(argv_line,shell=True)
+    subprocess.run([sys.executable, os.path.join(sys.path[0], 'bkgraph.py'), bkamplicon_f, argv2, argv3], check=True)
     print('bkgraph finished')
 
-    index_line = 'samtools index '+disc_bam_f
-    subprocess.run(index_line,shell=True)
-    if args.lib == 'sc':
-        argv_line2 = 'python '+sys.path[0]+'/20230301_graph.py '+argv3+' '+args.name+'.result '+'sc '+args.gtf + ' '+str(args.threads)
-    if args.lib == 'bulk':
-        argv_line2 = 'python '+sys.path[0]+'/20230301_graph.py ' + argv3 + ' ' + args.name + '.result ' + 'bulk ' + args.gtf + ' '+str(args.threads)
+    subprocess.run(['samtools', 'index', disc_bam_f], check=True)
+    argv_line2 = [sys.executable, os.path.join(sys.path[0], '20230301_graph.py'),
+                  argv3, args.name + '.result', args.lib, args.gtf, str(args.threads)]
     print(argv_line2)
-    subprocess.run(argv_line2,shell=True)
+    subprocess.run(argv_line2, check=True)
 
 if args.mode == 1:
     discbk_f = args.discbk
@@ -371,23 +370,16 @@ if args.mode == 1:
     print(time.time() - s_t)
     argv2 = args.name + '.bkline_interval'
     argv3 = args.name + '.bkline_dif_interval'
-    argv_line = 'python '+sys.path[0]+'/bkgraph.py ' + bkamplicon_f + ' ' + argv2 + ' ' + argv3
-    subprocess.run(argv_line, shell=True)
+    subprocess.run([sys.executable, os.path.join(sys.path[0], 'bkgraph.py'), bkamplicon_f, argv2, argv3], check=True)
 
     #20230501 add
     print('bkgraph finished')
-    disc_bam_f = discbk_f.strip('disc_bk')+'bam'
-    index_line = 'samtools index '+disc_bam_f
-    subprocess.run(index_line,shell=True)
-    if args.lib == 'sc':
-        argv_line2 = 'python '+sys.path[0]+'/20230301_graph.py '+argv3+' ' \
-                                                                       ''+args.name+'.result '+'sc '+args.gtf+' '+str(args.threads)
-    if args.lib == 'bulk':
-        argv_line2 = 'python '+sys.path[0]+'/20230301_graph.py ' + argv3 + ' ' \
-                                                                           ''\
-                     + args.name + '.result ' + 'bulk ' + args.gtf+' ' \
-                                                                   ''+str(args.threads)
+    suffix = '.disc_bk'
+    disc_bam_f = discbk_f[:-len(suffix)] + '.bam' if discbk_f.endswith(suffix) else discbk_f + '.bam'
+    subprocess.run(['samtools', 'index', disc_bam_f], check=True)
+    argv_line2 = [sys.executable, os.path.join(sys.path[0], '20230301_graph.py'),
+                  argv3, args.name + '.result', args.lib, args.gtf, str(args.threads)]
     print(argv_line2)
-    subprocess.run(argv_line2,shell=True)
+    subprocess.run(argv_line2, check=True)
 
 

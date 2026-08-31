@@ -26,28 +26,30 @@ class find_amp:
 #Calculates the sequencing depth of the specified length region to the left of the locus, the default length is interval
 	def interval_cov(self,samfile_name,chr_n,site,interval_size=None):
 		reads=0
-		interval_size=self.interval
-		llimit = site-interval_size
-		if llimit<=0:
+		interval_size = interval_size or self.interval
+		llimit = max(0, site-interval_size)
+		window_size = site - llimit
+		if window_size <= 0:
 			return 0
 	#	print(chr_n,samfile_name.get_reference_length(chr_n),llimit,site)
 		for i,k in enumerate(samfile_name.count_coverage(chr_n,llimit,site)):
 			reads=reads+sum(k)
-		return(reads/interval_size)
+		return(reads/window_size)
 
 	#As above, calculate the sequencing depth of the right-hand region
 	def interval_cov1(self,samfile_name,chr_n,site,interval_size=None):
 		reads=0
-		interval_size = self.interval
+		interval_size = interval_size or self.interval
 
-		rsite = site+interval_size
+		rsite = min(site+interval_size, samfile_name.get_reference_length(chr_n))
 		#print(chr_n,samfile_name.get_reference_length(chr_n),site)
-		if rsite > samfile_name.get_reference_length(chr_n):
+		window_size = rsite - site
+		if window_size <= 0:
 			return 0
 	#	print(chr_n, samfile_name.get_reference_length(chr_n),site,end_site)
 		for i,k in enumerate(samfile_name.count_coverage(chr_n,site,rsite)):
 			reads=reads+sum(k)
-		return(reads/interval_size)
+		return(reads/window_size)
 
 	#Finding contiguous regions with sequencing depth
 	def find_amplicon(self,sam,start_c,start_s,cov_t=5):
@@ -57,7 +59,8 @@ class find_amp:
 		if l_site >= sam.get_reference_length(start_c):
 			l_site = sam.get_reference_length(start_c) - 1
 
-			#Continuous area on the left
+		# Continuous area on the left. This must run for ordinary in-range
+		# breakpoints too, not only for coordinates beyond the contig.
 		while self.interval_cov(sam,start_c,l_site)>cov_t or self.interval_cov(sam,start_c,l_site,interval_size=10*interval)>cov_t:
 			l_site=l_site-interval
 			if l_site <= 0:
@@ -89,13 +92,12 @@ class find_amp:
 		samfile = self.samfile
 		s_t = time.time()
 		f_bkline = open(bk_file,'r')
-		bklines = f_bkline.readlines()
 		#Create a results file
 		outfile_n = bk_file+'.amplicon'
 		f_out = open(outfile_n,'w')
 		#count3 counts how many rows have been read
 		count3 = 0
-		for line in bklines:
+		for line in f_bkline:
 			count3 = count3 + 1
 			if count3%1000 == 0:
 				print(count3)
@@ -107,7 +109,7 @@ class find_amp:
 			bkline_list = line.split('\t')
 
 			#Less than 5 breakpoint pairs with reads support do not
-			if int(bkline_list[4]) <= support_reads:
+			if int(bkline_list[4]) < support_reads:
 				continue
 
 			#Read the chromosomes located at both ends of the breakpoint pair
@@ -131,7 +133,7 @@ class find_amp:
 				#If not, call find_amplicon to search for the augmented region starting with the endpoint and add this region to the augmented region dictionary
 
 				first_l,first_r = self.find_amplicon(samfile,s_chr,start_site)
-				chrom_dir[s_chr].append(Interval(first_r,first_l))
+				chrom_dir[s_chr].append(Interval(first_l,first_r))
 
 			#As above, determine the right endpoint
 			if self.isinchrom_dir(e_chr,end_site)[0]:
@@ -146,6 +148,8 @@ class find_amp:
 				f_out.write(out_line)
 
 
+		f_bkline.close()
+		f_out.close()
 		return(outfile_n)
 
 #fina_amp('COLO320HSR_rep2_atac_possorted_bam.bam',interval=1000).process_coverage()
@@ -153,5 +157,3 @@ class find_amp:
 	#	print(find_amplicon(samfile,s_chr,start_site)[1]-find_amplicon(samfile,s_chr,start_site)[0])
 	#	print(find_amplicon(samfile,e_chr,end_site))
 	#	print(find_amplicon(samfile,e_chr,end_site)[1]-find_amplicon(samfile,e_chr,end_site)[0])
-
-
